@@ -1,0 +1,18 @@
+2026-02-05 00:01:17 | INFO     | filemanager | Configuration saved and updated.
+2026-02-05 00:02:47 | INFO     | filemanager | Configuration saved and updated.
+2026-02-05 00:02:47 | INFO     | filemanager | Configuration saved and updated.
+2026-02-05 00:02:47 | INFO     | filemanager | Moved: test.txt -> Documents/test (1).txt
+2026-02-05 00:02:47 | INFO     | filemanager | File test.txt already exists in C:\Users\ghoni\AppData\Local\Temp\pytest-of-dingo\pytest-0\test_organizer_skip_logic0\Documents. Skipping.
+2026-02-05 00:02:47 | INFO     | filemanager | Starting observer on: C:\Users\ghoni\Downloads
+2026-02-05 00:02:47 | INFO     | filemanager | Observer stopped.
+2026-02-05 00:02:48 | INFO     | filemanager | Re-evaluating observer status due to config change...
+2026-02-05 00:10:13 | INFO     | filemanager | Configuration saved and updated.
+2026-02-05 00:10:13 | INFO     | filemanager | Configuration saved and updated.
+2026-02-05 00:10:13 | INFO     | filemanager | Moved: test.txt -> Documents/test (1).txt
+2026-02-05 00:10:13 | INFO     | filemanager | File test.txt already exists in C:\Users\ghoni\AppData\Local\Temp\pytest-of-dingo\pytest-1\test_organizer_skip_logic0\Documents. Skipping.
+2026-02-05 00:10:13 | INFO     | filemanager | Starting observer on: C:\Users\ghoni\Downloads
+2026-02-05 00:10:13 | INFO     | filemanager | Observer stopped.
+2026-02-05 00:10:14 | INFO     | filemanager | Re-evaluating observer status due to config change...
+2026-02-05 00:22:32 | INFO     | filemanager | DRY-RUN MODE: No real changes will be made.
+2026-02-05 00:22:32 | INFO     | filemanager | [DRY-RUN] Would delete duplicate: C:\Users\ghoni\AppData\Local\Temp\pytest-of-dingo\pytest-2\test_dry_run_safety0\delete
+2026-02-05 00:22:32 | INFO     | filemanager | [DRY-RUN] Would delete 0-byte file: C:\Users\ghoni\AppData\Local\Temp\pytest-of-dingo\pytest-2\test_dry_run_safety0\empty

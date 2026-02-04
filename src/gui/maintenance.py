@@ -1,0 +1,89 @@
+import customtkinter as ctk
+import threading
+from src.services.health_service import health_service
+from src.services.config_service import config_service
+from src.services.logger import logger
+from tkinter import messagebox
+
+class MaintenanceFrame(ctk.CTkFrame):
+    """GUI tab for directory health auditing and cleanup."""
+    def __init__(self, master, **kwargs):
+        super().__init__(master, **kwargs)
+        
+        self.grid_columnconfigure(0, weight=1)
+        
+        # Title
+        ctk.CTkLabel(self, text="System Maintenance & Health", font=ctk.CTkFont(size=24, weight="bold")).grid(row=0, column=0, padx=20, pady=(20, 10), sticky="w")
+        
+        # Actions
+        self.action_frame = ctk.CTkFrame(self)
+        self.action_frame.grid(row=1, column=0, padx=20, pady=10, sticky="ew")
+        
+        self.audit_btn = ctk.CTkButton(self.action_frame, text="Run Health Audit", command=self.run_audit_threaded)
+        self.audit_btn.grid(row=0, column=0, padx=20, pady=20)
+        
+        self.cleanup_btn = ctk.CTkButton(self.action_frame, text="Execute Cleanup", command=self.confirm_cleanup, fg_color="#e67e22", hover_color="#d35400")
+        self.cleanup_btn.grid(row=0, column=1, padx=20, pady=20)
+        self.cleanup_btn.configure(state="disabled")
+
+        # Report Area
+        self.report_label = ctk.CTkLabel(self, text="No audit performed yet.", font=ctk.CTkFont(size=14))
+        self.report_label.grid(row=2, column=0, padx=20, pady=10, sticky="w")
+        
+        self.report_box = ctk.CTkTextbox(self, height=200, state="disabled")
+        self.report_box.grid(row=3, column=0, padx=20, pady=10, sticky="nsew")
+        
+        self.progress_bar = ctk.CTkProgressBar(self)
+        self.progress_bar.grid(row=4, column=0, padx=20, pady=10, sticky="ew")
+        self.progress_bar.set(0)
+
+        self.last_report = None
+
+    def run_audit_threaded(self):
+        self.audit_btn.configure(state="disabled")
+        self.report_label.configure(text="Scanning directory...")
+        self.progress_bar.start()
+        
+        thread = threading.Thread(target=self._run_audit)
+        thread.start()
+
+    def _run_audit(self):
+        try:
+            report = health_service.run_audit()
+            self.last_report = report
+            self.after(0, lambda: self.show_report(report))
+        except Exception as e:
+            logger.error(f"Audit failed: {e}")
+            self.after(0, lambda: self.report_label.configure(text="Audit failed. Check logs."))
+        finally:
+            self.after(0, self.progress_bar.stop)
+            self.after(0, lambda: self.audit_btn.configure(state="normal"))
+
+    def show_report(self, report):
+        self.report_label.configure(text="Audit Summary:")
+        
+        summary = (
+            f"Empty Folders: {len(report['empty_folders'])}\n"
+            f"Duplicates: {len(report['duplicates'])}\n"
+            f"Orphans: {len(report['orphans'])}\n"
+            f"0-Byte Files: {len(report['zero_byte_files'])}\n"
+            f"Potential Space Reclaimed: {report['space_waste_bytes'] / 1024 / 1024:.2f} MB"
+        )
+        
+        self.report_box.configure(state="normal")
+        self.report_box.delete("1.0", "end")
+        self.report_box.insert("1.0", summary)
+        self.report_box.configure(state="disabled")
+        
+        self.cleanup_btn.configure(state="normal")
+
+    def confirm_cleanup(self):
+        dry_run = config_service.get("cleanup", {}).get("dry_run", True)
+        msg = "Ready to perform cleanup?"
+        if not dry_run:
+            msg += "\n\nWARNING: DRY-RUN is OFF. This will actually DELETE or MOVE files permanently."
+        
+        if messagebox.askyesno("Confirm Cleanup", msg):
+            stats = health_service.execute_cleanup(self.last_report)
+            messagebox.showinfo("Cleanup Result", f"Deleted: {stats['deleted']}\nMoved: {stats['moved']}\nSaved: {stats['saved_bytes']/1024:.2f} KB")
+            self.cleanup_btn.configure(state="disabled")

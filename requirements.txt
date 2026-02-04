@@ -1,0 +1,6 @@
+watchdog
+customtkinter
+pyyaml
+pytest
+pytest-mock
+pyinstaller
