@@ -33,7 +33,8 @@ class DashboardFrame(ctk.CTkFrame):
         self.start_btn = ctk.CTkButton(self.btn_frame, text="Start Monitor", command=self.toggle_monitor)
         self.start_btn.grid(row=0, column=0, padx=(0, 10))
         
-        self.info_label.configure(text=f"Watching: {config_service.get('watch_directory')}")
+        self.info_label = ctk.CTkLabel(self, text=f"Watching: {config_service.get('watch_directory')}", font=ctk.CTkFont(size=12, slant="italic"))
+        self.info_label.grid(row=3, column=0, padx=20, pady=5, sticky="w")
         
         # Additional Settings
         self.settings_frame = ctk.CTkFrame(self, fg_color="transparent")
