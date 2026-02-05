@@ -1,9 +1,15 @@
 from pathlib import Path
 from typing import Dict, List
+"""
+Classification Engine
+---------------------
+Logic for mapping file extensions to user-defined categories.
+"""
+import os
 from src.services.config_service import config_service
 
 class Classifier:
-    """Handles logic for mapping file extensions to categories."""
+    """Handles the categorization of files based on their extensions and configuration."""
     
     def __init__(self):
         self.refresh_mappings()

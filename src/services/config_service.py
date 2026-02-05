@@ -1,4 +1,9 @@
 import json
+"""
+Configuration Service
+---------------------
+Singleton service managing application settings, persistence, and hot-reloading.
+"""
 import threading
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Callable
@@ -28,7 +33,7 @@ DEFAULT_CONFIG = {
         "backup_dir": str(Path.home() / "FileManager_Backups")
     },
     "automation": {
-        "run_on_startup": True,
+        "run_on_startup": False,
         "auto_scan_interval_min": 60,
         "enable_auto_scan": False
     },

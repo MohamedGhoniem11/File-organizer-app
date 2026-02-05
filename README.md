@@ -1,106 +1,115 @@
 # FileManager Pro
 
-FileManager Pro is a production-grade Python application designed for automated file organization and real-time directory monitoring. Built with a modular, service-oriented architecture, it provides a robust engine for classifying and managing files while offering a modern graphical interface for administrative control.
+**FileManager Pro** is a production-grade Python application designed for automated file organization, intelligent directory monitoring, and natural language control. It combines a robust background engine with a modern `customtkinter` interface.
 
-## Table of Contents
-- [Features](#features)
-- [Architecture](#architecture)
-- [Getting Started](#getting-started)
-- [Usage](#usage)
-- [Configuration](#configuration)
-- [Directory Health and Cleanup](#directory-health-and-cleanup)
-- [Development and Testing](#development-and-testing)
-- [Deployment](#deployment)
-- [Roadmap](#roadmap)
-- [Contributing](#contributing)
-- [License](#license)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Python](https://img.shields.io/badge/python-3.10+-yellow.svg)
+![Platform](https://img.shields.io/badge/platform-Windows-blue.svg)
 
-## Features
-- **Real-time Monitoring**: Integrated `watchdog` service for instantaneous processing of incoming files.
-- **Intelligent Classification**: Custom mapping of file extensions to logical categories via JSON configuration.
-- **Health and Housekeeping**: Automated discovery of empty directories, duplicate files (via SHA-256 hashing), and orphaned files.
-- **Safety-First Deletion**: Mandatory dry-run mode for cleanup operations with GUI-based confirmation prompts.
-- **Modern UI**: Streamlined dashboard built with `customtkinter` featuring real-time status and logs.
-- **Configuration Management**: Persistent JSON-based configuration with live hot-reloading support.
-- **Standalone Packaging**: Pre-configured build scripts for Windows executable distribution.
+---
 
-## Architecture
-The project adheres to a strict separation of concerns to facilitate extensibility:
+## 🚀 Features
 
-- **`src/core/`**: Implementation of business logic, including classification engines, file system organizers, and health auditing tools.
-- **`src/gui/`**: Presentation layer containing individual view components (Dashboard, Logs, Settings, Maintenance) and the main application container.
-- **`src/services/`**: Infrastructure layer providing singletons for configuration management, logging, and background observation.
-- **`src/utils/`**: Shared utility functions for path sanitization and string processing.
+- **Real-time Monitoring**: Instantaneously detects and sorts files using `watchdog`.
+- **Intelligent Assistant**: Natural language chatbot ("Find my PDFs", "Cleanup downloads") powered by `spaCy` and `SQLite`.
+- **Auto-Startup**: "Run on Windows Startup" integration for set-and-forget operation.
+- **Safety First**: "Dry-Run" mode prevents accidental file deletion during cleanup.
+- **Smart Cleanup**: Identifies duplicates (SHA-256), orphans, and zero-byte files.
+- **Modern UI**: Dark-mode dashboard with real-time logs and maintenance reports.
 
-## Getting Started
+---
 
-### Prerequisites
-- Python 3.10 or higher.
+## 🛠️ Architecture
 
-### Installation
-1. Clone the repository to your local machine.
-2. Install the required dependencies:
+The project follows a modular Service-Oriented Architecture (SOA):
+
+```mermaid
+graph TD
+    UI[GUI Layer (CustomTkinter)] --> Services
+    Services --> Core
+    
+    subgraph Services
+        Obs[Observer Service]
+        NLP[NLP Service]
+        Health[Health Service]
+    end
+    
+    subgraph Core
+        Org[Organizer]
+        Class[Classifier]
+        DB[(SQLite Index)]
+    end
+    
+    Obs --> Org
+    Obs --> Class
+    Obs --> DB
+    NLP --> DB
+```
+
+- **`src/services/`**: Singleton managers (Config, Logger, Observer).
+- **`src/core/`**: Pure logic (File operations, Hashing, NLP parsing).
+- **`src/gui/`**: View components decoupled from business logic.
+
+---
+
+## 🏁 Getting Started
+
+### Option 1: Running from Source
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/yourusername/filemanager-pro.git
+   cd filemanager-pro
+   ```
+2. **Install dependencies**:
    ```bash
    pip install -r requirements.txt
+   python -m spacy download en_core_web_sm
+   ```
+3. **Run the application**:
+   ```bash
+   python -m src.main
    ```
 
-## Usage
+### Option 2: Building Executable
+To create a standalone `.exe`:
+1. Run the build script:
+   ```bash
+   build_exe.bat
+   ```
+2. Find your executable in the `dist/` folder.
 
-### GUI Mode
-Launch the primary application dashboard:
-```bash
-python -m src.main
-```
+---
 
-### Operational Modes
-- **Monitoring**: Background service that watches the configured `Downloads` folder.
-- **Maintenance**: Manual or scheduled auditing of directory health to reclaim storage and remove redundancy.
+## 🧩 Challenges & Solutions
 
-## Configuration
-Application settings are managed via `config/config.json`. Key parameters include:
+Developing a filesystem manager for Windows introduced several unique engineering challenges:
 
-- `watch_directory`: Absolute path to the directory under monitoring.
-- `categories`: Mapping of category identifiers to lists of supported file extensions.
-- `monitor_enabled`: Boolean flag to control background observation.
-- `collision_strategy`: Strategy for handling filename conflicts (`rename`, `skip`, or `overwrite`).
-- `cleanup`: Parameters for auditing, including `dry_run` and `handle_orphans` policies.
+### 1. The "File In Use" Race Condition
+**Problem**: When a browser downloads a generic file (e.g., `.crdownload`), our observer would try to move it immediately, crashing because the file was locked.  
+**Solution**: Implemented a `FileLock` retry mechanism in `observer.py`. The system now waits for the file handle to be released before attempting a move.
 
-## Directory Health and Cleanup
-The Health Engine provides comprehensive auditing capabilities:
-- **Deduplication**: Identification of identical file contents using SHA-256 hashing, regardless of filename.
-- **Orphan Management**: Handling of files that do not match defined classification rules (defaults to `move_to_misc`).
-- **Safety Protocols**: All destructive operations require explicit user consent and default to non-destructive simulation (Dry-Run).
+### 2. Dependency Hell in Executables
+**Problem**: `PyInstaller` failed to bundle the `en_core_web_sm` spaCy model and hidden imports like `babel`.  
+**Solution**: Custom `hook-spacy.py` and hidden-import definitions in `FileManager Pro.spec` to explicitly include language model vectors.
 
-## Development and Testing
+### 3. Infinite Recursion Loops
+**Problem**: Moving a file triggered a "File Modified" event, which triggered another move, creating an infinite loop.  
+**Solution**: The `ObserverService` now essentially ignores events originating from its own destination folders and uses a brief cooldown.
 
-### Testing
-Verify project integrity using `pytest`:
-```bash
-pytest
-```
-The test suite utilizes mocks to ensure no actual file system mutations occur during validation.
+### 4. Config Corruption
+**Problem**: The "Run Cleanup" command accidentally overwrote the entire `config.json` with a partial dictionary, wiping out user settings.  
+**Solution**: Implemented a strict `validate_and_merge` strategy in `config_service.py` and fixed the specific NLP handler to perform a specific key update rather than a full overwrite.
 
-### CI/CD
-Automated testing is integrated into the development workflow via GitHub Actions, as defined in `.github/workflows/tests.yml`.
+---
 
-## Deployment
-To bundle the application into a standalone Windows executable, execute the provided batch script:
-```bash
-build_exe.bat
-```
-The resulting binary will be generated in the `dist/` directory.
-
-## Roadmap
-- **NLP Integration**: Natural language search capabilities for semantic file retrieval.
-- **Cloud Integration**: Support for Dropbox and Google Drive synchronization.
-- **Network Support**: Monitoring and organization for network-mapped drives.
-
-## Contributing
-1. Fork the repository.
-2. Create your feature branch (`git checkout -b feature/NewFeature`).
-3. Commit your changes (`git commit -m 'Add NewFeature'`).
-4. Push to the branch (`git push origin feature/NewFeature`).
+## 🤝 Contributing
+1. Fork the repo.
+2. Create feature branch (`git checkout -b feature/amazing-feature`).
+3. Commit changes (`git commit -m 'Add amazing feature'`).
+4. Push to branch (`git push origin feature/amazing-feature`).
 5. Open a Pull Request.
 
-## License
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+---
+
+## 📜 License
+MIT License. See `LICENSE` for more information.

@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+
+# Build Artifacts
+build/
+dist/
+*.spec
+*.exe
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# App Data
+config/config.json
+config/metadata.db
+files.db
+*.log
+.antigravityignore

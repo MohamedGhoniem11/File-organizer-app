@@ -1,13 +1,20 @@
 import shutil
 import time
+"""
+File System Organizer
+---------------------
+Responsible for the physical movement, renaming, and management of files.
+Also handles collision resolution strategies and directory creation.
+"""
 import os
 from pathlib import Path
 from typing import Optional
+from src.utils.path_utils import sanitize_filename
 from src.services.logger import logger
 from src.services.config_service import config_service
 
 class Organizer:
-    """Handles the physical movement of files with collision safety."""
+    """Provides high-level file system operations with safety and collision management."""
 
     def move_file(self, source_path: Path, target_dir: Path) -> Optional[Path]:
         """

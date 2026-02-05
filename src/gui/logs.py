@@ -1,9 +1,14 @@
+"""
+Log View Component
+------------------
+Scrollable log display integrated with the system's queue handler.
+"""
 import customtkinter as ctk
 from src.services.logger import logger, log_queue
 import queue
 
 class LogsFrame(ctk.CTkFrame):
-    """A scrollable frame for real-time log display."""
+    """Displays real-time application logs for administrative monitoring."""
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
         

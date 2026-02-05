@@ -1,3 +1,9 @@
+"""
+Maintenance View
+----------------
+Interface for performing manual directory health audits and cleanup operations.
+Displays detailed reports on duplicates, orphans, and space savings.
+"""
 import customtkinter as ctk
 import threading
 from src.services.health_service import health_service
@@ -6,7 +12,7 @@ from src.services.logger import logger
 from tkinter import messagebox
 
 class MaintenanceFrame(ctk.CTkFrame):
-    """GUI tab for directory health auditing and cleanup."""
+    """GUI component for orchestrating file system health and cleanup tasks."""
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
         

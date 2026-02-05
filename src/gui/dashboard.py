@@ -1,10 +1,15 @@
+"""
+Dashboard View
+--------------
+Primary status overview showing service state and current watch directory.
+"""
 import customtkinter as ctk
 from src.services.observer import observer_service
 from src.services.config_service import config_service
 from src.services.logger import logger
 
 class DashboardFrame(ctk.CTkFrame):
-    """Main dashboard view with status and controls."""
+    """Visual representation of system health and real-time monitor status."""
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
         
@@ -28,10 +33,40 @@ class DashboardFrame(ctk.CTkFrame):
         self.start_btn = ctk.CTkButton(self.btn_frame, text="Start Monitor", command=self.toggle_monitor)
         self.start_btn.grid(row=0, column=0, padx=(0, 10))
         
-        self.info_label = ctk.CTkLabel(self, text=f"Watching: {config_service.get('watch_directory')}", font=ctk.CTkFont(size=12, slant="italic"))
-        self.info_label.grid(row=3, column=0, padx=20, pady=5, sticky="w")
+        self.info_label.configure(text=f"Watching: {config_service.get('watch_directory')}")
         
+        # Additional Settings
+        self.settings_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.settings_frame.grid(row=4, column=0, padx=20, pady=10, sticky="w")
+        
+        from src.services.startup_service import startup_service
+        self.startup_var = ctk.BooleanVar(value=startup_service.is_enabled())
+        
+        self.startup_switch = ctk.CTkSwitch(
+            self.settings_frame, 
+            text="Run on Windows Startup", 
+            command=self.toggle_startup,
+            variable=self.startup_var
+        )
+        self.startup_switch.grid(row=0, column=0)
+
         self.update_status()
+
+    def toggle_startup(self):
+        from src.services.startup_service import startup_service
+        from src.services.config_service import config_service
+        
+        if self.startup_var.get():
+            startup_service.enable_startup()
+            logger.info("Startup enabled via dashboard.")
+        else:
+            startup_service.disable_startup()
+            logger.info("Startup disabled via dashboard.")
+            
+        # Persist preference
+        auto = config_service.get("automation", {}).copy()
+        auto["run_on_startup"] = self.startup_var.get()
+        config_service.save_config({"automation": auto})
 
     def toggle_monitor(self):
         if observer_service.is_running:

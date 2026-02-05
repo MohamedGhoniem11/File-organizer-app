@@ -1,3 +1,10 @@
+"""
+FileManager Pro - Main Entry Point
+----------------------------------
+Orchestrates the lifecycle of the file manager application, including
+service initialization, background monitoring, and GUI launching.
+"""
+import sys
 from src.services.logger import logger
 from src.services.config_service import config_service
 from src.services.observer import observer_service
@@ -5,6 +12,7 @@ from src.services.health_service import health_service
 from src.gui.app import start_gui
 import threading
 import time
+import multiprocessing
 
 def engine_worker():
     """Background worker to check for config updates if the GUI is running."""
@@ -13,6 +21,7 @@ def engine_worker():
         time.sleep(2)
 
 def main():
+    multiprocessing.freeze_support()
     logger.info("Starting File Manager Pro...")
     
     # Auto-start observer if enabled in config

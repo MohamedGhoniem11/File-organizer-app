@@ -1,5 +1,8 @@
 watchdog
+spacy
 customtkinter
+winshell
+pypiwin32
 pyyaml
 pytest
 pytest-mock

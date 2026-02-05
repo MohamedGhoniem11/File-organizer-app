@@ -1,9 +1,15 @@
+"""
+Settings View
+-------------
+Configuration interface for modifying application parameters such as
+watch directory, monitoring status, and collision strategies.
+"""
 import customtkinter as ctk
 from src.services.config_service import config_service
 from src.services.logger import logger
 
 class SettingsFrame(ctk.CTkFrame):
-    """A frame for editing configuration settings."""
+    """User interface for persistent application configuration management."""
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
         

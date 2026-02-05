@@ -1,14 +1,21 @@
+"""
+Health Service
+--------------
+Orchestrates directory audits and automated cleanup operations.
+Provides thread-safe access to the Health Engine and Organizer for GUI integration.
+"""
 import threading
 import time
 from pathlib import Path
-from typing import Dict, Any, Optional
-from src.core.health_engine import health_engine
-from src.core.organizer import organizer
+from typing import Dict, List, Callable, Optional
 from src.services.logger import logger
 from src.services.config_service import config_service
+from src.core.health_engine import health_engine
+from src.core.organizer import organizer
+from src.services.db_service import db_service
 
 class HealthService:
-    """Service to coordinate directory health audits and cleanups."""
+    """Service layer for coordinating directory health checks and maintenance tasks."""
 
     def __init__(self):
         self.last_report = {}
@@ -18,7 +25,12 @@ class HealthService:
         """Runs a scan and returns the results without taking action."""
         self.is_scanning = True
         try:
-            watch_dir = Path(config_service.get("watch_directory"))
+            path_str = config_service.get("watch_directory")
+            if not path_str:
+                logger.error("Watch directory is not configured.")
+                return {"error": "Watch directory not configured"}
+
+            watch_dir = Path(path_str)
             logger.info(f"Starting health audit for {watch_dir}...")
             self.last_report = health_engine.scan_directory(watch_dir)
             logger.info(f"Audit complete. Formatted report generated.")
@@ -107,5 +119,32 @@ class HealthService:
                 self.execute_cleanup(report)
             else:
                 time.sleep(300) # Check config every 5 mins
+
+    def scan_and_index(self, directory: Path) -> Dict[str, int]:
+        """
+        Manually scans a directory and adds all files to the DB index.
+        Does NOT move or organize files.
+        """
+        logger.info(f"Manual scan started for: {directory}")
+        if not directory.exists():
+            return {"error": "Directory not found"}
+            
+        stats = {"indexed": 0, "errors": 0}
+        
+        try:
+            # Recursive scan
+            for item in directory.rglob("*"):
+                if item.is_file():
+                    try:
+                        db_service.upsert_file(item)
+                        stats["indexed"] += 1
+                    except Exception as e:
+                        stats["errors"] += 1
+                        
+            logger.info(f"Manual scan complete. Stats: {stats}")
+            return stats
+        except Exception as e:
+            logger.error(f"Scan failed: {e}")
+            return {"error": str(e)}
 
 health_service = HealthService()

@@ -1,6 +1,12 @@
 import logging
+"""
+Logging Infrastructure
+----------------------
+Setup for dual-output logging (console and file) with queue support for GUI integration.
+"""
 import logging.handlers
 import sys
+import os
 import queue
 from pathlib import Path
 

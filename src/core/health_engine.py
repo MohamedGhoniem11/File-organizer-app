@@ -1,3 +1,9 @@
+"""
+Health Engine
+-------------
+Audit tool for scanning directories for structural and data redundancy issues.
+Identifies empty folders, duplicate files, zero-byte files, and orphans.
+"""
 import hashlib
 import os
 from pathlib import Path
@@ -7,7 +13,7 @@ from src.services.config_service import config_service
 from src.core.classifier import classifier
 
 class HealthEngine:
-    """Core engine for scanning and identifying directory health issues."""
+    """Core logic for performing deep-scans and directory auditing."""
 
     def __init__(self):
         self.reset_results()

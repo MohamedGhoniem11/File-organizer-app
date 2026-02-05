@@ -1,4 +1,12 @@
 import time
+"""
+Observer Service
+----------------
+Manages real-time filesystem monitoring using the watchdog library.
+Coordinates initial synchronization and event-driven file organization.
+"""
+import os
+import threading
 from pathlib import Path
 from typing import Dict, Any
 from watchdog.observers import Observer
@@ -7,9 +15,10 @@ from src.services.logger import logger
 from src.services.config_service import config_service
 from src.core.classifier import classifier
 from src.core.organizer import organizer
+from src.services.db_service import db_service
 
 class DownloadHandler(FileSystemEventHandler):
-    """Handles file system events in the watched directory."""
+    """Event handler for processing new or moved files in the watched directory."""
 
     def on_created(self, event):
         if event.is_directory:
@@ -19,8 +28,14 @@ class DownloadHandler(FileSystemEventHandler):
     def on_moved(self, event):
         if event.is_directory:
             return
-        # If a file is moved INTO the downloads folder from elsewhere
+        # Remove old path from index, add new path
+        db_service.remove_file(Path(event.src_path))
         self._process_file(Path(event.dest_path))
+
+    def on_deleted(self, event):
+        if event.is_directory:
+            return
+        db_service.remove_file(Path(event.src_path))
 
     def _process_file(self, file_path: Path):
         """Classifies and moves a single file."""
@@ -33,11 +48,13 @@ class DownloadHandler(FileSystemEventHandler):
         category = classifier.classify(file_path)
         target_dir = file_path.parent / category
         
-        # Prevent moving files that are already in a category folder
         if file_path.parent.name == category:
+            db_service.upsert_file(file_path)
             return
 
-        organizer.move_file(file_path, target_dir)
+        final_path = organizer.move_file(file_path, target_dir)
+        if final_path:
+            db_service.upsert_file(final_path)
 
 class ObserverService:
     """Manages the lifecycle of the watchdog Observer."""
@@ -69,6 +86,28 @@ class ObserverService:
         self.observer.schedule(event_handler, str(path), recursive=False)
         self.observer.start()
         self.is_running = True
+        
+        # Proactively organize existing files
+        threading.Thread(target=self.sync_existing_files, daemon=True).start()
+
+    def sync_existing_files(self):
+        """Iterates through existing files in the directory and organizes them."""
+        watch_path = config_service.get("watch_directory")
+        if not watch_path:
+            return
+            
+        path = Path(watch_path)
+        if not path.exists():
+            return
+            
+        logger.info(f"Performing initial sync for: {path}")
+        handler = DownloadHandler()
+        
+        for item in path.iterdir():
+            if item.is_file():
+                handler._process_file(item)
+        
+        logger.info("Initial sync complete.")
 
     def restart_if_needed(self, new_config: Dict[str, Any]):
         """Restarts the observer if monitoring was toggled or path changed."""

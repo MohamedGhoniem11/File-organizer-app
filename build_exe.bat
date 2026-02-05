@@ -19,7 +19,7 @@ echo Compiling with PyInstaller...
 :: --add-data: Bundles assets or external files if needed
 :: Note: config.json is auto-created by the app if missing, so we don't need to bundle a specific one.
 
-pyinstaller --onefile --windowed --name "FileManager Pro" src/main.py
+pyinstaller --onefile --windowed --name "FileManager Pro" --paths . src/main.py
 
 echo.
 echo ========================================

@@ -1,12 +1,20 @@
+"""
+Main GUI Container
+------------------
+Root window for the CustomTkinter application.
+Handles view switching, navigation, and global layout.
+"""
 import customtkinter as ctk
+from src.services.config_service import config_service
+from src.services.logger import logger
 from .dashboard import DashboardFrame
 from .logs import LogsFrame
 from .settings import SettingsFrame
 from .maintenance import MaintenanceFrame
-from src.services.config_service import config_service
+from .chat import ChatFrame
 
 class App(ctk.CTk):
-    """Main Application Window."""
+    """Main application window container and navigation controller."""
     def __init__(self):
         super().__init__()
 
@@ -38,8 +46,11 @@ class App(ctk.CTk):
         self.maintenance_btn = ctk.CTkButton(self.sidebar_frame, text="Maintenance", command=lambda: self.select_frame("maintenance"), corner_radius=0, height=40, border_spacing=10, fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"), anchor="w")
         self.maintenance_btn.grid(row=4, column=0, sticky="ew")
 
+        self.assistant_btn = ctk.CTkButton(self.sidebar_frame, text="Assistant", command=lambda: self.select_frame("assistant"), corner_radius=0, height=40, border_spacing=10, fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"), anchor="w")
+        self.assistant_btn.grid(row=5, column=0, sticky="ew")
+
         self.appearance_mode_menu = ctk.CTkOptionMenu(self.sidebar_frame, values=["Light", "Dark", "System"], command=self.change_appearance_mode)
-        self.appearance_mode_menu.grid(row=5, column=0, padx=20, pady=20)
+        self.appearance_mode_menu.grid(row=6, column=0, padx=20, pady=20)
         self.appearance_mode_menu.set(config_service.get("gui_preferences", {}).get("theme", "Dark").capitalize())
 
         # Main Content Frames
@@ -47,6 +58,7 @@ class App(ctk.CTk):
         self.logs_frame = LogsFrame(self, corner_radius=0, fg_color="transparent")
         self.settings_frame = SettingsFrame(self, corner_radius=0, fg_color="transparent")
         self.maintenance_frame = MaintenanceFrame(self, corner_radius=0, fg_color="transparent")
+        self.assistant_frame = ChatFrame(self, corner_radius=0, fg_color="transparent")
 
         # Initial Frame
         self.select_frame("dashboard")
@@ -57,6 +69,7 @@ class App(ctk.CTk):
         self.logs_btn.configure(fg_color=("gray75", "gray25") if name == "logs" else "transparent")
         self.settings_btn.configure(fg_color=("gray75", "gray25") if name == "settings" else "transparent")
         self.maintenance_btn.configure(fg_color=("gray75", "gray25") if name == "maintenance" else "transparent")
+        self.assistant_btn.configure(fg_color=("gray75", "gray25") if name == "assistant" else "transparent")
 
         # Show selected frame
         if name == "dashboard":
@@ -78,6 +91,11 @@ class App(ctk.CTk):
             self.maintenance_frame.grid(row=0, column=1, sticky="nsew")
         else:
             self.maintenance_frame.grid_forget()
+
+        if name == "assistant":
+            self.assistant_frame.grid(row=0, column=1, sticky="nsew")
+        else:
+            self.assistant_frame.grid_forget()
 
     def change_appearance_mode(self, new_appearance_mode: str):
         ctk.set_appearance_mode(new_appearance_mode)
