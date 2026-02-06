@@ -1,26 +1,39 @@
-# FileManager Pro
-
-**FileManager Pro** is a production-grade Python application designed for automated file organization, intelligent directory monitoring, and natural language control. It combines a robust background engine with a modern `customtkinter` interface.
+# File Organizer
 
 ![Python](https://img.shields.io/badge/python-3.10+-yellow.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue.svg)
 
 ---
 
-## 🚀 Features
+## About
 
-- **Real-time Monitoring**: Instantaneously detects and sorts files using `watchdog`.
-- **Intelligent Assistant**: Natural language chatbot ("Find my PDFs", "Cleanup downloads") powered by `spaCy` and `SQLite`.
-- **Auto-Startup**: "Run on Windows Startup" integration for set-and-forget operation.
-- **Safety First**: "Dry-Run" mode prevents accidental file deletion during cleanup.
-- **Smart Cleanup**: Identifies duplicates (SHA-256), orphans, and zero-byte files.
-- **Modern UI**: Dark-mode dashboard with real-time logs and maintenance reports.
+FileManager Pro is a production-grade Python application that reimagines file management through automation and intelligent organization. Built from the ground up to address real-world filesystem challenges, it combines a robust background monitoring engine with a modern interface to provide a set-and-forget solution for keeping directories organized.
+
+At its core, FileManager Pro solves a common problem: manual file organization is tedious, error-prone, and doesn't scale. Whether you're managing downloads, project files, or media libraries, this tool automatically categorizes, monitors, and maintains your filesystem based on customizable rules. The natural language interface allows you to query and control your files conversationally, while the intelligent cleanup system identifies duplicates, orphaned files, and other inefficiencies that accumulate over time.
+
+The project emphasizes production-ready engineering practices: modular architecture, comprehensive error handling, safe file operations with dry-run capabilities, and resilient execution even in edge cases like locked files or infinite event loops. It's designed for users who need reliability and developers who value clean, maintainable code.
 
 ---
 
-## 🛠️ Architecture
+## Table of Contents
 
-The project follows a modular Service-Oriented Architecture (SOA):
+- [Architecture](#️-architecture)
+- [Technical Stack](#-technical-stack)
+- [Engineering Challenges & Solutions](#-engineering-challenges--solutions)
+  - [Race Conditions with File Locks](#1-race-conditions-with-file-locks)
+  - [PyInstaller Packaging Issues](#2-pyinstaller-packaging-issues)
+  - [Infinite Event Loops](#3-infinite-event-loops)
+  - [Configuration Corruption](#4-configuration-corruption)
+- [Quick Start](#-quick-start)
+- [Key Features](#-key-features)
+- [Contributing](#-contributing)
+- [License](#-license)
+
+---
+
+## 🏗️ Architecture
+
+FileManager follows a modular Service-Oriented Architecture (SOA) with clear separation of concerns:
 
 ```mermaid
 graph TD
@@ -28,21 +41,17 @@ graph TD
     SvcHub --> Obs
     SvcHub --> NLP
     SvcHub --> Health
-
     Obs --> CoreHub
     NLP --> CoreHub
-
     CoreHub --> Org
     CoreHub --> Classifier
     CoreHub --> DB
-
     subgraph Services
         SvcHub((Services))
         Obs
         NLP
         Health
     end
-
     subgraph Core
         CoreHub((Core))
         Org
@@ -51,65 +60,135 @@ graph TD
     end
 ```
 
-- **`src/services/`**: Singleton managers (Config, Logger, Observer).
-- **`src/core/`**: Pure logic (File operations, Hashing, NLP parsing).
-- **`src/gui/`**: View components decoupled from business logic.
+### Layer Breakdown
+
+- **`src/services/`** - Singleton managers handling configuration, logging, and file observation
+- **`src/core/`** - Pure business logic for file operations, hashing, and NLP parsing
+- **`src/gui/`** - View components built with `customtkinter`, decoupled from business logic
 
 ---
 
-## 🏁 Getting Started
+## 🔧 Technical Stack
 
-### Option 1: Running from Source
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/yourusername/filemanager-pro.git
-   cd filemanager-pro
-   ```
-2. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   python -m spacy download en_core_web_sm
-   ```
-3. **Run the application**:
-   ```bash
-   python -m src.main
-   ```
-
-### Option 2: Building Executable
-To create a standalone `.exe`:
-1. Run the build script:
-   ```bash
-   build_exe.bat
-   ```
-2. Find your executable in the `dist/` folder.
+- **File Monitoring**: `watchdog` for real-time filesystem events
+- **NLP Processing**: `spaCy` with `en_core_web_sm` model
+- **Data Persistence**: `SQLite` for metadata and query history
+- **UI Framework**: `customtkinter` for modern dark-mode interface
+- **File Integrity**: SHA-256 hashing for duplicate detection
 
 ---
 
-## 🧩 Challenges & Solutions
+## 💡 Engineering Challenges & Solutions
 
-Developing a filesystem manager for Windows introduced several unique engineering challenges:
+### 1. Race Conditions with File Locks
 
-### 1. The "File In Use" Race Condition
-**Problem**: When a browser downloads a generic file (e.g., `.crdownload`), our observer would try to move it immediately, crashing because the file was locked.  
-**Solution**: Implemented a `FileLock` retry mechanism in `observer.py`. The system now waits for the file handle to be released before attempting a move.
+**Problem**: Browser downloads create temporary files (`.crdownload`) that are locked during the download process. Attempting to move these files immediately caused crashes.
 
-### 2. Dependency Hell in Executables
-**Problem**: `PyInstaller` failed to bundle the `en_core_web_sm` spaCy model and hidden imports like `babel`.  
-**Solution**: Custom `hook-spacy.py` and hidden-import definitions in `FileManager Pro.spec` to explicitly include language model vectors.
+**Solution**: Implemented a `FileLock` retry mechanism in `observer.py`. The system now polls and waits for file handle release before attempting filesystem operations.
 
-### 3. Infinite Recursion Loops
-**Problem**: Moving a file triggered a "File Modified" event, which triggered another move, creating an infinite loop.  
-**Solution**: The `ObserverService` now essentially ignores events originating from its own destination folders and uses a brief cooldown.
+```python
+# Simplified example
+def safe_move(src, dest, max_retries=5):
+    for attempt in range(max_retries):
+        try:
+            shutil.move(src, dest)
+            break
+        except PermissionError:
+            time.sleep(0.5)
+```
 
-### 4. Config Corruption
-**Problem**: The "Run Cleanup" command accidentally overwrote the entire `config.json` with a partial dictionary, wiping out user settings.  
-**Solution**: Implemented a strict `validate_and_merge` strategy in `config_service.py` and fixed the specific NLP handler to perform a specific key update rather than a full overwrite.
+### 2. PyInstaller Packaging Issues
+
+**Problem**: `PyInstaller` failed to bundle the `en_core_web_sm` spaCy model and hidden imports like `babel`, resulting in runtime errors in the built executable.
+
+**Solution**: Created custom `hook-spacy.py` and explicit hidden-import declarations in `FileManager Pro.spec` to ensure all language model vectors and dependencies are included in the bundle.
+
+```python
+# FileManager Pro.spec excerpt
+hiddenimports=[
+    'babel.numbers',
+    'spacy.lang.en',
+    # ... additional imports
+]
+```
+
+### 3. Infinite Event Loops
+
+**Problem**: Moving a file triggered a "File Modified" event, which triggered another move operation, creating an infinite recursion loop.
+
+**Solution**: The `ObserverService` now filters out events originating from destination folders and implements a cooldown period to prevent cascading triggers.
+
+```python
+def on_modified(self, event):
+    if event.src_path in self.destination_paths:
+        return  # Ignore self-triggered events
+    # ... process event
+```
+
+### 4. Configuration Corruption
+
+**Problem**: The cleanup command accidentally overwrote the entire `config.json` with a partial dictionary, destroying user settings.
+
+**Solution**: Implemented a `validate_and_merge` strategy in `config_service.py` that performs granular key updates rather than full overwrites:
+
+```python
+def update_config(self, updates):
+    current = self.load_config()
+    current.update(updates)  # Merge instead of replace
+    self.save_config(current)
+```
+
+---
+
+## 🚀 Quick Start
+
+### Running from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/filemanager-pro.git
+cd filemanager-pro
+
+# Install dependencies
+pip install -r requirements.txt
+python -m spacy download en_core_web_sm
+
+# Run the application
+python -m src.main
+```
+
+### Building Executable
+
+```bash
+# Build standalone .exe
+build_exe.bat
+
+# Output will be in dist/ folder
+```
+
+---
+
+## 🧪 Key Features
+
+- **Real-time Monitoring** - Instant file detection and sorting via `watchdog`
+- **Natural Language Interface** - Query files with commands like "Find my PDFs" or "Cleanup downloads"
+- **Smart Cleanup** - Identifies duplicates (SHA-256), orphans, and zero-byte files
+- **Dry-Run Mode** - Preview cleanup operations before execution
+- **Auto-Startup Integration** - Set-and-forget operation with Windows startup
+- **Activity Logging** - Real-time dashboard with operation history
 
 ---
 
 ## 🤝 Contributing
-1. Fork the repo.
-2. Create feature branch (`git checkout -b feature/amazing-feature`).
-3. Commit changes (`git commit -m 'Add amazing feature'`).
-4. Push to branch (`git push origin feature/amazing-feature`).
-5. Open a Pull Request.
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is open source and available under the [MIT License](LICENSE).
