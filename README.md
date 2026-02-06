@@ -146,7 +146,7 @@ def update_config(self, updates):
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/filemanager-pro.git
+git clone https://github.com/MohamedGhoniem11/File-organizer-app
 cd filemanager-pro
 
 # Install dependencies
